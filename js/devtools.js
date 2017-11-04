@@ -4,7 +4,7 @@
 // Purpose:  Defines the panel html file and icon
 
 
-chrome.devtools.panels.create("WProf 2.0",
+chrome.devtools.panels.create("Web Profiler",
     "icon64.png",
     "panel.html",
 function(panel) {
