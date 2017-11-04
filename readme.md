@@ -2,9 +2,9 @@
 Created as a part of the FCN Term Project, this chrome devtools extension helps to identify web page loading in the rendering process.
 
 ## Team Name & Members:
-* __Thomas Binu__:
-* __Nihar Patil__:
-* __Kritka Sahni__:
+* __Thomas Binu__
+* __Nihar Patil__
+* __Kritka Sahni__
 
 ## Installation Instructions
 1) Either download & extract (as a .zip), or simply clone this repo to your computer using `git clone https://github.com/KrNiTh/WebProfiler.git`.
