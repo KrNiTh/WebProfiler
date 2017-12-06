@@ -6,12 +6,12 @@
 chrome.runtime.onConnect.addListener(function (port) {
 
     var perfData = window.performance; 
-    var network = window.network;
-    metric={
-    	"performance":perfData,
-    	"network":network
-    };
-    var str = JSON.stringify(metric);
-    port.postMessage(str);
+    // var network = window.network;
+    // metric={
+    // 	"performance":perfData,
+    // 	"network":network
+    // };
+    // var str = JSON.stringify(metric);
+    port.postMessage(perfData);
 });
 

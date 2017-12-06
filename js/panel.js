@@ -3,6 +3,10 @@
 // Authors:  Thomas Binu & Nihar Patil & Kritka Sahni
 // Purpose:  Defines panel UI and captures HAR request
 
+var performance;
+var gotData = false;
+var winPerf;
+
 var port = chrome.runtime.connect({
     name: "panels-page"
 });
@@ -12,6 +16,7 @@ port.onMessage.addListener(function (message) {
    // document.getElementById('performance').innerHTML  = JSON.stringify(message);
 	console.log("Inside Message");
    	console.log(message);
+   	winPerf = message;
 
 });
 
@@ -34,26 +39,30 @@ requestAccumulator.count =1;
 requestAccumulator.graphCount =0;
 requestAccumulator.endTimes =[];
 
-jsColor = 'rgb(0,128,128)';
-jsName = 'JS';
+firstRequestStartTime =0;
+totalPageLoadTime = 0
+prevEndTime = 0
 
-cssColor = 'rgb(0,0,128)';
-cssName = 'CSS';
 
-htmlColor = 'rgb(0,128,0)';
-htmlName = 'html';
-
-imageColor = 'rgb(128,128,0)';
-imageName = 'image';
-
-defaultColor = 'rgb(128,0,128)';
-defaultName = 'default';
 firstRequestStartTime =0;
 
 function requestAccumulator(startTime, endTime,request){
 	if(requestAccumulator.count == 1){
 		firstRequestStartTime = startTime;
+		totalPageLoadTime = endTime - startTime;
 	}
+	else{
+
+		if (prevEndTime > startTime)
+			totalPageLoadTime += (endTime - prevEndTime);
+		else{
+			totalPageLoadTime += (endTime - startTime);
+		}
+
+	}
+	prevEndTime = endTime;
+
+
 	requestAccumulator.requests.push(request);
 	startTime = (startTime - firstRequestStartTime);
 	endTime = (endTime-firstRequestStartTime+2);
@@ -61,37 +70,12 @@ function requestAccumulator(startTime, endTime,request){
 	requestAccumulator.endTimes.push(endTime);
 	// chrome.devtools.inspectedWindow.eval('console.log('+requestAccumulator.startTimes+')');
 	// chrome.devtools.inspectedWindow.eval('console.log('+requestAccumulator.endTimes+')');
-	var plotName = jsName;
-	var plotColor = jsColor;
 	requestAccumulator.graphCount =0;
 	var documentType = request.response.content.mimeType;
 
-	switch(documentType){
-		case "text/css":
-			plotName = cssName;
-			plotColor = cssColor;
-			break;
-		case "text/html":
-			plotName = htmlName;
-			plotColor = htmlColor;
-			break;
-		case "application/javascript":
-			plotName = jsName;
-			plotColor = jsColor;
-			break;
-		case "image/png":
-			plotName = imageName;
-			plotColor = imageColor;
-			break;
-		
-		default:
-			plotName = defaultName;
-			plotColor = defaultColor;
-			
-	}
 	plotName = request.response.content.mimeType;
 	buildGraph();
-	console.log(request);
+	// console.log(request);
 	var trace = {
   		x: [startTime, endTime],
   		y:  [requestAccumulator.count,requestAccumulator.count],
@@ -109,8 +93,6 @@ function requestAccumulator(startTime, endTime,request){
 
 }
 
-
-	
 function buildGraph(){
 	var hash ={};
 	var i;
@@ -118,7 +100,7 @@ function buildGraph(){
 	var minEndTime = requestAccumulator.endTimes[i];
 	for(i = 0; i<requestAccumulator.startTimes.length-1;i++){
 		for(j = i+1;j<requestAccumulator.startTimes.length;j++){
-			if(requestAccumulator.endTimes[i] < requestAccumulator.startTimes[j]){
+			if(requestAccumulator.endTimes[i] <= requestAccumulator.startTimes[j]){
 				if(hash[requestAccumulator.requests[i].response.content.mimeType] == undefined){
 					hash[requestAccumulator.requests[i].response.content.mimeType] = new Set();
 				}
@@ -132,9 +114,7 @@ function buildGraph(){
 }
 
 function plotGraph(hash){
-	console.log("Inside Plot Graph Function");
-	console.log("Hash = "+JSON.stringify(hash));
-
+	
 	var graph = new Springy.Graph();
 
 	var k;
@@ -143,7 +123,6 @@ function plotGraph(hash){
 	Object.keys(hash).forEach(function(key) {
 		var m = graph.newNode({label:key});
 		hash[key].forEach(function(key1){
-			console.log("Hash[key] = "+key1);
 			var n = graph.newNode({label:key1});
 			graph.newEdge(m,n);
 		}); 
@@ -152,21 +131,31 @@ function plotGraph(hash){
   		var springy = window.springy = jQuery('#my_canvas').springy({
     		graph: graph,
     		nodeSelected: function(node){
-      		console.log('Node selected: ' + JSON.stringify(node.data));
     	}
   	});
 });
-	console.log(hash);
+	// console.log(hash);
 	
 	// $('#my_canvas').springy({ graph: graph });
 
 }
 
-// redraw = function() {
-//         layouter.layout();
-//         renderer.draw();
-//     };
 function plotTimings(){
-	console.log("Plot Graph Called");
 	Plotly.newPlot('timings', requestAccumulator.traces);
+	pageLoadTime();
+}
+
+
+function pageLoadTime(){
+	console.log("Page Load Called");
+
+    var endTime = requestAccumulator.endTimes[requestAccumulator.count - 1];
+    var displayString = endTime;
+
+    
+    var domLoadingComplete = winPerf.timing.domComplete -  winPerf.timing.domLoading ;
+	var domParsingTime = winPerf.timing.domContentLoadedEventEnd -  winPerf.timing.domLoading ;
+	displayString += "dom parsing time:" + domParsingTime + 'end time:' + domLoadingComplete;
+
+    document.getElementById('pageload').innerHTML = Math.round((domParsingTime / (domParsingTime+totalPageLoadTime)) * 100) + "%";
 }
