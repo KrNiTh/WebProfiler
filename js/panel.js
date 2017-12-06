@@ -65,6 +65,7 @@ function requestAccumulator(startTime, endTime,request){
 	var plotColor = jsColor;
 	requestAccumulator.graphCount =0;
 	var documentType = request.response.content.mimeType;
+
 	switch(documentType){
 		case "text/css":
 			plotName = cssName;
@@ -88,16 +89,17 @@ function requestAccumulator(startTime, endTime,request){
 			plotColor = defaultColor;
 			
 	}
-	buildGraph(request);
+	plotName = request.response.content.mimeType;
+	buildGraph();
 	console.log(request);
 	var trace = {
   		x: [startTime, endTime],
   		y:  [requestAccumulator.count,requestAccumulator.count],
   		type: 'scatter',
-  		name: plotName,
-  		marker:{
-    		color: plotColor
-  		}
+  		name: plotName
+  		// marker:{
+    // 		color: plotColor
+  		// }
 	};
 	requestAccumulator.traces.push(trace);
 	plotTimings();
@@ -107,6 +109,8 @@ function requestAccumulator(startTime, endTime,request){
 
 }
 
+
+	
 function buildGraph(){
 	var hash ={};
 	var i;
@@ -116,20 +120,52 @@ function buildGraph(){
 		for(j = i+1;j<requestAccumulator.startTimes.length;j++){
 			if(requestAccumulator.endTimes[i] < requestAccumulator.startTimes[j]){
 				if(hash[requestAccumulator.requests[i].response.content.mimeType] == undefined){
-					hash[requestAccumulator.requests[i].response.content.mimeType] = [];
+					hash[requestAccumulator.requests[i].response.content.mimeType] = new Set();
 				}
-				hash[requestAccumulator.requests[i].response.content.mimeType].push(requestAccumulator.requests[j].response.content.mimeType);
-				break;
+				hash[requestAccumulator.requests[i].response.content.mimeType].add(requestAccumulator.requests[j].response.content.mimeType);
 			}
 		}
 	}
-	var k;
-	// for(k =0;k<hash.length;k++){
-		document.getElementById('graph').innerHTML = JSON.stringify(hash);
-	// }
+	plotGraph(hash);
+	
 	// console.log(hash);
 }
 
+function plotGraph(hash){
+	console.log("Inside Plot Graph Function");
+	console.log("Hash = "+JSON.stringify(hash));
+
+	var graph = new Springy.Graph();
+
+	var k;
+	var l;
+	
+	Object.keys(hash).forEach(function(key) {
+		var m = graph.newNode({label:key});
+		hash[key].forEach(function(key1){
+			console.log("Hash[key] = "+key1);
+			var n = graph.newNode({label:key1});
+			graph.newEdge(m,n);
+		}); 
+	});
+	jQuery(function(){
+  		var springy = window.springy = jQuery('#my_canvas').springy({
+    		graph: graph,
+    		nodeSelected: function(node){
+      		console.log('Node selected: ' + JSON.stringify(node.data));
+    	}
+  	});
+});
+	console.log(hash);
+	
+	// $('#my_canvas').springy({ graph: graph });
+
+}
+
+// redraw = function() {
+//         layouter.layout();
+//         renderer.draw();
+//     };
 function plotTimings(){
 	console.log("Plot Graph Called");
 	Plotly.newPlot('timings', requestAccumulator.traces);
